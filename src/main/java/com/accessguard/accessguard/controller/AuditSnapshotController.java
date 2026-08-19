@@ -1,0 +1,54 @@
+package com.accessguard.accessguard.controller;
+
+import com.accessguard.accessguard.entity.AuditSnapshot;
+import com.accessguard.accessguard.service.AuditSnapshotService;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.UUID;
+
+@RestController
+@RequestMapping("/api/audit-snapshots")
+public class AuditSnapshotController {
+
+    private final AuditSnapshotService service;
+
+    public AuditSnapshotController(AuditSnapshotService service) {
+        this.service = service;
+    }
+
+    @GetMapping
+    public List<AuditSnapshot> getAll() {
+        return service.findAll();
+    }
+
+    @GetMapping("/{id}")
+    public AuditSnapshot getById(@PathVariable UUID id) {
+        return service.findById(id);
+    }
+
+    @PostMapping
+    public ResponseEntity<AuditSnapshot> create(@Valid @RequestBody AuditSnapshot payload) {
+        AuditSnapshot created = service.create(payload);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    }
+
+    @PutMapping("/{id}")
+    public AuditSnapshot replace(@PathVariable UUID id, @Valid @RequestBody AuditSnapshot payload) {
+        return service.replace(id, payload);
+    }
+
+    @PatchMapping("/{id}")
+    public AuditSnapshot partialUpdate(@PathVariable UUID id, @RequestBody AuditSnapshot payload) {
+        return service.partialUpdate(id, payload);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable UUID id) {
+        service.delete(id);
+        return ResponseEntity.noContent().build();
+    }
+}

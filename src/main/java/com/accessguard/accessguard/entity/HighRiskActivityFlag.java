@@ -1,9 +1,17 @@
 package com.accessguard.accessguard.entity;
 
-import jakarta.persistence.*;
-import jakarta.validation.constraints.NotNull;
 import java.time.LocalDateTime;
 import java.util.UUID;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotNull;
 
 @Entity
 @Table(name = "high_risk_activity_flag")
@@ -34,6 +42,7 @@ public class HighRiskActivityFlag {
     @Column(name = "reviewed_by")
     private UUID reviewedBy;
 
+    @jakarta.validation.constraints.Pattern(regexp = "PENDING|REVIEWED|DISMISSED", message = "reviewStatus must be PENDING, REVIEWED, or DISMISSED")
     @Column(name = "review_status", nullable = false, length = 30)
     private String reviewStatus = "PENDING";
 

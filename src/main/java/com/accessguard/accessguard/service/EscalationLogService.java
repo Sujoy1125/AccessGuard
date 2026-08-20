@@ -1,15 +1,20 @@
 package com.accessguard.accessguard.service;
 
-import com.accessguard.accessguard.entity.EscalationLog;
-import com.accessguard.accessguard.exception.ResourceNotFoundException;
-import com.accessguard.accessguard.repository.EscalationLogRepository;
-import org.springframework.stereotype.Service;
-
 import java.util.List;
 import java.util.UUID;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+
+import com.accessguard.accessguard.entity.EscalationLog;
+import com.accessguard.accessguard.exception.ResourceNotFoundException;
+import com.accessguard.accessguard.repository.EscalationLogRepository;
+
 @Service
 public class EscalationLogService {
+
+    private static final Logger log = LoggerFactory.getLogger(EscalationLogService.class);
 
     private final EscalationLogRepository repository;
 
@@ -18,17 +23,24 @@ public class EscalationLogService {
     }
 
     public List<EscalationLog> findAll() {
+        log.debug("Fetching all EscalationLog records");
         return repository.findAll();
     }
 
     public EscalationLog findById(UUID id) {
         return repository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("EscalationLog", id));
+                .orElseThrow(() -> {
+                    log.warn("EscalationLog not found id={}", id);
+                    return new ResourceNotFoundException("EscalationLog", id);
+                });
     }
 
     public EscalationLog create(EscalationLog payload) {
         payload.setId(null);
-        return repository.save(payload);
+        EscalationLog saved = repository.save(payload);
+        log.info("Created EscalationLog id={} revocationTaskId={} escalatedTo={}",
+                saved.getId(), saved.getRevocationTaskId(), saved.getEscalatedTo());
+        return saved;
     }
 
     public EscalationLog replace(UUID id, EscalationLog payload) {
@@ -37,32 +49,29 @@ public class EscalationLogService {
         existing.setEscalatedTo(payload.getEscalatedTo());
         existing.setEscalatedAt(payload.getEscalatedAt());
         existing.setReason(payload.getReason());
-        return repository.save(existing);
+        EscalationLog saved = repository.save(existing);
+        log.info("Replaced EscalationLog id={}", saved.getId());
+        return saved;
     }
 
     public EscalationLog partialUpdate(UUID id, EscalationLog payload) {
         EscalationLog existing = findById(id);
-        if (payload.getRevocationTaskId() != null) {
+        if (payload.getRevocationTaskId() != null)
             existing.setRevocationTaskId(payload.getRevocationTaskId());
-        }
-        if (payload.getEscalatedTo() != null) {
+        if (payload.getEscalatedTo() != null)
             existing.setEscalatedTo(payload.getEscalatedTo());
-        }
-        if (payload.getEscalatedAt() != null) {
+        if (payload.getEscalatedAt() != null)
             existing.setEscalatedAt(payload.getEscalatedAt());
-        }
-        if (payload.getReason() != null) {
+        if (payload.getReason() != null)
             existing.setReason(payload.getReason());
-        }
-        return repository.save(existing);
+        EscalationLog saved = repository.save(existing);
+        log.info("Patched EscalationLog id={}", saved.getId());
+        return saved;
     }
 
-    // Note: in the finished system, EscalationLog should probably be
-    // append-only (matches the "audit trail integrity" claim in the doc).
-    // Delete is included here for CRUD completeness / testing today;
-    // consider removing this endpoint before the real demo.
     public void delete(UUID id) {
         EscalationLog existing = findById(id);
         repository.delete(existing);
+        log.warn("Deleted EscalationLog id={} (append-only trail — verify this was intentional)", id);
     }
 }

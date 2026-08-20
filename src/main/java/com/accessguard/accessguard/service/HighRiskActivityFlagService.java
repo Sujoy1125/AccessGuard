@@ -1,15 +1,20 @@
 package com.accessguard.accessguard.service;
 
-import com.accessguard.accessguard.entity.HighRiskActivityFlag;
-import com.accessguard.accessguard.exception.ResourceNotFoundException;
-import com.accessguard.accessguard.repository.HighRiskActivityFlagRepository;
-import org.springframework.stereotype.Service;
-
 import java.util.List;
 import java.util.UUID;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+
+import com.accessguard.accessguard.entity.HighRiskActivityFlag;
+import com.accessguard.accessguard.exception.ResourceNotFoundException;
+import com.accessguard.accessguard.repository.HighRiskActivityFlagRepository;
+
 @Service
 public class HighRiskActivityFlagService {
+
+    private static final Logger log = LoggerFactory.getLogger(HighRiskActivityFlagService.class);
 
     private final HighRiskActivityFlagRepository repository;
 
@@ -18,20 +23,24 @@ public class HighRiskActivityFlagService {
     }
 
     public List<HighRiskActivityFlag> findAll() {
+        log.debug("Fetching all HighRiskActivityFlag records");
         return repository.findAll();
     }
 
     public HighRiskActivityFlag findById(UUID id) {
         return repository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("HighRiskActivityFlag", id));
+                .orElseThrow(() -> {
+                    log.warn("HighRiskActivityFlag not found id={}", id);
+                    return new ResourceNotFoundException("HighRiskActivityFlag", id);
+                });
     }
 
     public HighRiskActivityFlag create(HighRiskActivityFlag payload) {
         payload.setId(null);
-        if (payload.getReviewStatus() == null) {
-            payload.setReviewStatus("PENDING");
-        }
-        return repository.save(payload);
+        HighRiskActivityFlag saved = repository.save(payload);
+        log.info("Created HighRiskActivityFlag id={} employeeId={} activityType={}",
+                saved.getId(), saved.getEmployeeId(), saved.getActivityType());
+        return saved;
     }
 
     public HighRiskActivityFlag replace(UUID id, HighRiskActivityFlag payload) {
@@ -42,36 +51,33 @@ public class HighRiskActivityFlagService {
         existing.setDetectedAt(payload.getDetectedAt());
         existing.setReviewedBy(payload.getReviewedBy());
         existing.setReviewStatus(payload.getReviewStatus());
-        return repository.save(existing);
+        HighRiskActivityFlag saved = repository.save(existing);
+        log.info("Replaced HighRiskActivityFlag id={}", saved.getId());
+        return saved;
     }
 
-    // PATCH is the realistic use case here: a reviewer picks up a flag and
-    // sets reviewedBy + reviewStatus without resending the whole record.
     public HighRiskActivityFlag partialUpdate(UUID id, HighRiskActivityFlag payload) {
         HighRiskActivityFlag existing = findById(id);
-        if (payload.getEmployeeId() != null) {
+        if (payload.getEmployeeId() != null)
             existing.setEmployeeId(payload.getEmployeeId());
-        }
-        if (payload.getSourceSystem() != null) {
+        if (payload.getSourceSystem() != null)
             existing.setSourceSystem(payload.getSourceSystem());
-        }
-        if (payload.getActivityType() != null) {
+        if (payload.getActivityType() != null)
             existing.setActivityType(payload.getActivityType());
-        }
-        if (payload.getDetectedAt() != null) {
+        if (payload.getDetectedAt() != null)
             existing.setDetectedAt(payload.getDetectedAt());
-        }
-        if (payload.getReviewedBy() != null) {
+        if (payload.getReviewedBy() != null)
             existing.setReviewedBy(payload.getReviewedBy());
-        }
-        if (payload.getReviewStatus() != null) {
+        if (payload.getReviewStatus() != null)
             existing.setReviewStatus(payload.getReviewStatus());
-        }
-        return repository.save(existing);
+        HighRiskActivityFlag saved = repository.save(existing);
+        log.info("Patched HighRiskActivityFlag id={} reviewStatus={}", saved.getId(), saved.getReviewStatus());
+        return saved;
     }
 
     public void delete(UUID id) {
         HighRiskActivityFlag existing = findById(id);
         repository.delete(existing);
+        log.info("Deleted HighRiskActivityFlag id={}", id);
     }
 }

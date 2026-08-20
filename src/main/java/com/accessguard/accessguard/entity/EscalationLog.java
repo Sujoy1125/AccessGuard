@@ -1,9 +1,15 @@
 package com.accessguard.accessguard.entity;
 
-import jakarta.persistence.*;
-import jakarta.validation.constraints.NotNull;
 import java.time.LocalDateTime;
 import java.util.UUID;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotNull;
 
 @Entity
 @Table(name = "escalation_log")
@@ -26,6 +32,7 @@ public class EscalationLog {
     private LocalDateTime escalatedAt;
 
     @NotNull
+    @jakarta.validation.constraints.Size(max = 500, message = "reason must not exceed 500 characters")
     @Column(name = "reason", nullable = false, length = 500)
     private String reason;
 

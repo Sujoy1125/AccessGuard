@@ -1,7 +1,0 @@
-The following files have been resolved:
-   org.springframework.boot:spring-boot-starter-data-jpa:jar:4.1.0:compile -- module spring.boot.starter.data.jpa [auto]
-   org.springframework.boot:spring-boot-starter-webmvc:jar:4.1.0:compile -- module spring.boot.starter.webmvc [auto]
-   org.springframework.boot:spring-boot-starter-validation:jar:4.1.0:compile -- module spring.boot.starter.validation [auto]
-   org.postgresql:postgresql:jar:42.7.11:runtime -- module org.postgresql.jdbc [auto]
-   org.springdoc:springdoc-openapi-starter-webmvc-ui:jar:3.0.3:compile -- module org.springdoc.openapi.ui [auto]
-

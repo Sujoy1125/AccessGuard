@@ -2,6 +2,7 @@ package com.accessguard.accessguard.entity;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -13,16 +14,23 @@ public class DataAcknowledgment {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    // Plain UUID, not @ManyToOne: OffboardingCase is owned by Member 2
-    // and may not exist in the codebase yet. Swap this for a real
-    // relationship once the team merges branches, if you want to.
     @NotNull
-    @Column(name = "offboarding_case_id", nullable = false)
+    @Column(name = "offboarding_case_id", nullable = false, unique = true)
     private UUID offboardingCaseId;
+
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "offboarding_case_id", insertable = false, updatable = false)
+    @JsonIgnore
+    private OffboardingCase offboardingCase;
 
     @NotNull
     @Column(name = "employee_id", nullable = false)
     private UUID employeeId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "employee_id", insertable = false, updatable = false)
+    @JsonIgnore
+    private Employee employee;
 
     @NotNull
     @Column(name = "acknowledged_at", nullable = false)
@@ -57,6 +65,22 @@ public class DataAcknowledgment {
 
     public void setEmployeeId(UUID employeeId) {
         this.employeeId = employeeId;
+    }
+
+    @JsonIgnore
+    public OffboardingCase getOffboardingCase() { return offboardingCase; }
+
+    public void setOffboardingCase(OffboardingCase offboardingCase) {
+        this.offboardingCase = offboardingCase;
+        this.offboardingCaseId = offboardingCase == null ? null : offboardingCase.getId();
+    }
+
+    @JsonIgnore
+    public Employee getEmployee() { return employee; }
+
+    public void setEmployee(Employee employee) {
+        this.employee = employee;
+        this.employeeId = employee == null ? null : employee.getId();
     }
 
     public LocalDateTime getAcknowledgedAt() {

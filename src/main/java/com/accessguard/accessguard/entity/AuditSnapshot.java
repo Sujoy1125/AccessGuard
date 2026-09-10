@@ -25,10 +25,10 @@ public class AuditSnapshot {
     private Integer totalOffboardings = 0;
 
     @Column(name = "pct_fully_revoked_on_time")
-    private Double pctFullyRevokedOnTime;
+    private Float pctFullyRevokedOnTime;
 
     @Column(name = "avg_revocation_time_hrs")
-    private Double avgRevocationTimeHrs;
+    private Float avgRevocationTimeHrs;
 
     @Column(name = "overdue_cases_count", nullable = false)
     private Integer overdueCasesCount = 0;
@@ -68,19 +68,19 @@ public class AuditSnapshot {
         this.totalOffboardings = totalOffboardings;
     }
 
-    public Double getPctFullyRevokedOnTime() {
+    public Float getPctFullyRevokedOnTime() {
         return pctFullyRevokedOnTime;
     }
 
-    public void setPctFullyRevokedOnTime(Double pctFullyRevokedOnTime) {
+    public void setPctFullyRevokedOnTime(Float pctFullyRevokedOnTime) {
         this.pctFullyRevokedOnTime = pctFullyRevokedOnTime;
     }
 
-    public Double getAvgRevocationTimeHrs() {
+    public Float getAvgRevocationTimeHrs() {
         return avgRevocationTimeHrs;
     }
 
-    public void setAvgRevocationTimeHrs(Double avgRevocationTimeHrs) {
+    public void setAvgRevocationTimeHrs(Float avgRevocationTimeHrs) {
         this.avgRevocationTimeHrs = avgRevocationTimeHrs;
     }
 

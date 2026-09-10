@@ -3,15 +3,9 @@ package com.accessguard.accessguard.entity;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 @Entity
 @Table(name = "high_risk_activity_flag")
@@ -24,6 +18,11 @@ public class HighRiskActivityFlag {
     @NotNull
     @Column(name = "employee_id", nullable = false)
     private UUID employeeId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "employee_id", insertable = false, updatable = false)
+    @JsonIgnore
+    private Employee employee;
 
     @NotNull
     @Column(name = "source_system", nullable = false, length = 100)
@@ -41,6 +40,11 @@ public class HighRiskActivityFlag {
     // Nullable: no reviewer assigned yet until someone looks at the flag
     @Column(name = "reviewed_by")
     private UUID reviewedBy;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "reviewed_by", insertable = false, updatable = false)
+    @JsonIgnore
+    private Employee reviewer;
 
     @jakarta.validation.constraints.Pattern(regexp = "PENDING|REVIEWED|DISMISSED", message = "reviewStatus must be PENDING, REVIEWED, or DISMISSED")
     @Column(name = "review_status", nullable = false, length = 30)
@@ -95,6 +99,22 @@ public class HighRiskActivityFlag {
 
     public void setReviewedBy(UUID reviewedBy) {
         this.reviewedBy = reviewedBy;
+    }
+
+    @JsonIgnore
+    public Employee getEmployee() { return employee; }
+
+    public void setEmployee(Employee employee) {
+        this.employee = employee;
+        this.employeeId = employee == null ? null : employee.getId();
+    }
+
+    @JsonIgnore
+    public Employee getReviewer() { return reviewer; }
+
+    public void setReviewer(Employee reviewer) {
+        this.reviewer = reviewer;
+        this.reviewedBy = reviewer == null ? null : reviewer.getId();
     }
 
     public String getReviewStatus() {

@@ -15,9 +15,7 @@ public class OpenApiConfig {
         return new OpenAPI()
                 .info(new Info()
                         .title("AccessGuard API")
-                        .description("Employee Offboarding and Access Revocation Tracker — "
-                                + "compliance module (DataAcknowledgment, HighRiskActivityFlag, "
-                                + "EscalationLog, AuditSnapshot)")
+                        .description("All ten AccessGuard entities, offboarding workflow and compliance APIs")
                         .version("v1")
                         .contact(new Contact().name("AccessGuard Team")));
     }

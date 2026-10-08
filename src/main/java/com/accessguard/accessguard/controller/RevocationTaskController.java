@@ -19,11 +19,12 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.accessguard.accessguard.entity.DataAcknowledgment;
 import com.accessguard.accessguard.entity.Employee;
 import com.accessguard.accessguard.entity.OffboardingCase;
+import com.accessguard.accessguard.entity.RevocationTask;
+import com.accessguard.accessguard.entity.SystemEntity;
 import com.accessguard.accessguard.exception.ResourceNotFoundException;
-import com.accessguard.accessguard.repository.DataAcknowledgmentRepository;
+import com.accessguard.accessguard.repository.RevocationTaskRepository;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.persistence.EntityManager;
@@ -34,17 +35,17 @@ import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.node.ObjectNode;
 
 @RestController
-@RequestMapping("/api/data-acknowledgments")
-@Tag(name = "DataAcknowledgment")
+@RequestMapping("/api/revocation-tasks")
+@Tag(name = "RevocationTask")
 @Transactional
-public class DataAcknowledgmentController {
-    private static final Logger log = LoggerFactory.getLogger(DataAcknowledgmentController.class);
-    private final DataAcknowledgmentRepository repository;
+public class RevocationTaskController {
+    private static final Logger log = LoggerFactory.getLogger(RevocationTaskController.class);
+    private final RevocationTaskRepository repository;
     private final EntityManager entityManager;
     private final Validator validator;
     private final ObjectMapper mapper;
 
-    public DataAcknowledgmentController(DataAcknowledgmentRepository repository, EntityManager entityManager,
+    public RevocationTaskController(RevocationTaskRepository repository, EntityManager entityManager,
             Validator validator, ObjectMapper mapper) {
         this.repository = repository;
         this.entityManager = entityManager;
@@ -53,47 +54,48 @@ public class DataAcknowledgmentController {
     }
 
     @GetMapping
-    public List<DataAcknowledgment> getAll() {
+    public List<RevocationTask> getAll() {
         return repository.findAll();
     }
 
     @GetMapping("/{id}")
-    public DataAcknowledgment getById(@PathVariable UUID id) {
-        return repository.findById(id).orElseThrow(() -> new ResourceNotFoundException("DataAcknowledgment", id));
+    public RevocationTask getById(@PathVariable UUID id) {
+        return repository.findById(id).orElseThrow(() -> new ResourceNotFoundException("RevocationTask", id));
     }
 
     @PostMapping
-    public ResponseEntity<DataAcknowledgment> create(@Valid @RequestBody DataAcknowledgment payload) {
+    public ResponseEntity<RevocationTask> create(@Valid @RequestBody RevocationTask payload) {
         payload.setId(null);
         validate(payload);
-        DataAcknowledgment saved = repository.saveAndFlush(payload);
-        log.info("Created DataAcknowledgment {}", saved.getId());
+        RevocationTask saved = repository.saveAndFlush(payload);
+        log.info("Created RevocationTask {}", saved.getId());
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 
     @PutMapping("/{id}")
-    public DataAcknowledgment replace(@PathVariable UUID id, @Valid @RequestBody DataAcknowledgment payload) {
-        DataAcknowledgment existing = getById(id);
+    public RevocationTask replace(@PathVariable UUID id, @Valid @RequestBody RevocationTask payload) {
+        RevocationTask existing = getById(id);
         validate(payload);
         copy(payload, existing);
-        log.info("Replaced DataAcknowledgment {}", id);
+        log.info("Replaced RevocationTask {}", id);
         return repository.saveAndFlush(existing);
     }
 
     @PatchMapping("/{id}")
-    public DataAcknowledgment partialUpdate(@PathVariable UUID id, @RequestBody ObjectNode patch) {
-        DataAcknowledgment existing = getById(id);
+    public RevocationTask partialUpdate(@PathVariable UUID id, @RequestBody ObjectNode patch) {
+        RevocationTask existing = getById(id);
         ObjectNode merged = (ObjectNode) mapper.valueToTree(existing);
-        Set<String> allowed = Set.of("offboardingCaseId", "employeeId", "acknowledgedAt", "statementVersion");
+        Set<String> allowed = Set.of("offboardingCaseId", "systemId", "assignedOwnerId", "status", "confirmedAt",
+                "confirmedBy");
         for (String field : patch.propertyNames()) {
             if (!allowed.contains(field))
                 throw new IllegalArgumentException("Unknown or immutable field: " + field);
             merged.set(field, patch.get(field));
         }
-        DataAcknowledgment payload = mapper.treeToValue(merged, DataAcknowledgment.class);
+        RevocationTask payload = mapper.treeToValue(merged, RevocationTask.class);
         validate(payload);
         copy(payload, existing);
-        log.info("Patched DataAcknowledgment {}", id);
+        log.info("Patched RevocationTask {}", id);
         return repository.saveAndFlush(existing);
     }
 
@@ -101,28 +103,34 @@ public class DataAcknowledgmentController {
     public ResponseEntity<Void> delete(@PathVariable UUID id) {
         repository.delete(getById(id));
         repository.flush();
-        log.info("Deleted DataAcknowledgment {}", id);
+        log.info("Deleted RevocationTask {}", id);
         return ResponseEntity.noContent().build();
     }
 
-    private void copy(DataAcknowledgment payload, DataAcknowledgment existing) {
+    private void copy(RevocationTask payload, RevocationTask existing) {
         existing.setOffboardingCaseId(payload.getOffboardingCaseId());
-        existing.setEmployeeId(payload.getEmployeeId());
-        existing.setAcknowledgedAt(payload.getAcknowledgedAt());
-        existing.setStatementVersion(payload.getStatementVersion());
+        existing.setSystemId(payload.getSystemId());
+        existing.setAssignedOwnerId(payload.getAssignedOwnerId());
+        existing.setStatus(payload.getStatus());
+        existing.setConfirmedAt(payload.getConfirmedAt());
+        existing.setConfirmedBy(payload.getConfirmedBy());
     }
 
-    private void validate(DataAcknowledgment payload) {
+    private void validate(RevocationTask payload) {
         var errors = validator.validate(payload);
         if (!errors.isEmpty())
             throw new ConstraintViolationException(errors);
-        if (payload.getEmployeeId() != null && entityManager.find(Employee.class, payload.getEmployeeId()) == null)
-            throw new ResourceNotFoundException("Employee", payload.getEmployeeId());
         if (payload.getOffboardingCaseId() != null
                 && entityManager.find(OffboardingCase.class, payload.getOffboardingCaseId()) == null)
             throw new ResourceNotFoundException("OffboardingCase", payload.getOffboardingCaseId());
-        if (!entityManager.find(OffboardingCase.class, payload.getOffboardingCaseId()).getEmployeeId()
-                .equals(payload.getEmployeeId()))
-            throw new IllegalArgumentException("Acknowledgment employee must match offboarding case");
+        if (payload.getSystemId() != null && entityManager.find(SystemEntity.class, payload.getSystemId()) == null)
+            throw new ResourceNotFoundException("SystemEntity", payload.getSystemId());
+        if (payload.getAssignedOwnerId() != null
+                && entityManager.find(Employee.class, payload.getAssignedOwnerId()) == null)
+            throw new ResourceNotFoundException("Employee", payload.getAssignedOwnerId());
+        if (payload.getConfirmedBy() != null && entityManager.find(Employee.class, payload.getConfirmedBy()) == null)
+            throw new ResourceNotFoundException("Employee", payload.getConfirmedBy());
+        if ((payload.getConfirmedAt() == null) != (payload.getConfirmedBy() == null))
+            throw new IllegalArgumentException("confirmedAt and confirmedBy must be provided together");
     }
 }

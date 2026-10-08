@@ -20,10 +20,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.accessguard.accessguard.entity.Employee;
-import com.accessguard.accessguard.entity.EscalationLog;
-import com.accessguard.accessguard.entity.RevocationTask;
+import com.accessguard.accessguard.entity.SystemEntity;
 import com.accessguard.accessguard.exception.ResourceNotFoundException;
-import com.accessguard.accessguard.repository.EscalationLogRepository;
+import com.accessguard.accessguard.repository.SystemRepository;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.persistence.EntityManager;
@@ -34,17 +33,17 @@ import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.node.ObjectNode;
 
 @RestController
-@RequestMapping("/api/escalation-logs")
-@Tag(name = "EscalationLog")
+@RequestMapping("/api/systems")
+@Tag(name = "System")
 @Transactional
-public class EscalationLogController {
-    private static final Logger log = LoggerFactory.getLogger(EscalationLogController.class);
-    private final EscalationLogRepository repository;
+public class SystemController {
+    private static final Logger log = LoggerFactory.getLogger(SystemController.class);
+    private final SystemRepository repository;
     private final EntityManager entityManager;
     private final Validator validator;
     private final ObjectMapper mapper;
 
-    public EscalationLogController(EscalationLogRepository repository, EntityManager entityManager, Validator validator,
+    public SystemController(SystemRepository repository, EntityManager entityManager, Validator validator,
             ObjectMapper mapper) {
         this.repository = repository;
         this.entityManager = entityManager;
@@ -53,73 +52,73 @@ public class EscalationLogController {
     }
 
     @GetMapping
-    public List<EscalationLog> getAll() {
+    public List<SystemEntity> getAll() {
         return repository.findAll();
     }
 
     @GetMapping("/{id}")
-    public EscalationLog getById(@PathVariable UUID id) {
-        return repository.findById(id).orElseThrow(() -> new ResourceNotFoundException("EscalationLog", id));
+    public SystemEntity getById(@PathVariable UUID id) {
+        return repository.findById(id).orElseThrow(() -> new ResourceNotFoundException("SystemEntity", id));
     }
 
     @PostMapping
-    public ResponseEntity<EscalationLog> create(@Valid @RequestBody EscalationLog payload) {
+    public ResponseEntity<SystemEntity> create(@Valid @RequestBody SystemEntity payload) {
         payload.setId(null);
         validate(payload);
-        EscalationLog saved = repository.saveAndFlush(payload);
-        log.info("Created EscalationLog {}", saved.getId());
+        SystemEntity saved = repository.saveAndFlush(payload);
+        log.info("Created SystemEntity {}", saved.getId());
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 
     @PutMapping("/{id}")
-    public EscalationLog replace(@PathVariable UUID id, @Valid @RequestBody EscalationLog payload) {
-        EscalationLog existing = getById(id);
+    public SystemEntity replace(@PathVariable UUID id, @Valid @RequestBody SystemEntity payload) {
+        SystemEntity existing = getById(id);
         validate(payload);
         copy(payload, existing);
-        log.info("Replaced EscalationLog {}", id);
+        log.info("Replaced SystemEntity {}", id);
         return repository.saveAndFlush(existing);
     }
 
     @PatchMapping("/{id}")
-    public EscalationLog partialUpdate(@PathVariable UUID id, @RequestBody ObjectNode patch) {
-        EscalationLog existing = getById(id);
+    public SystemEntity partialUpdate(@PathVariable UUID id, @RequestBody ObjectNode patch) {
+        SystemEntity existing = getById(id);
         ObjectNode merged = (ObjectNode) mapper.valueToTree(existing);
-        Set<String> allowed = Set.of("revocationTaskId", "escalatedTo", "escalatedAt", "reason");
+        Set<String> allowed = Set.of("name", "ownerUserId", "category");
         for (String field : patch.propertyNames()) {
             if (!allowed.contains(field))
                 throw new IllegalArgumentException("Unknown or immutable field: " + field);
             merged.set(field, patch.get(field));
         }
-        EscalationLog payload = mapper.treeToValue(merged, EscalationLog.class);
+        SystemEntity payload = mapper.treeToValue(merged, SystemEntity.class);
         validate(payload);
         copy(payload, existing);
-        log.info("Patched EscalationLog {}", id);
+        log.info("Patched SystemEntity {}", id);
         return repository.saveAndFlush(existing);
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable UUID id) {
+        getById(id);
+        if (entityManager.createQuery("select count(g) from AccessGrantEntity g where g.systemId = :id", Long.class)
+                .setParameter("id", id).getSingleResult() > 0)
+            throw new org.springframework.dao.DataIntegrityViolationException("System is referenced by access grants");
         repository.delete(getById(id));
         repository.flush();
-        log.info("Deleted EscalationLog {}", id);
+        log.info("Deleted SystemEntity {}", id);
         return ResponseEntity.noContent().build();
     }
 
-    private void copy(EscalationLog payload, EscalationLog existing) {
-        existing.setRevocationTaskId(payload.getRevocationTaskId());
-        existing.setEscalatedTo(payload.getEscalatedTo());
-        existing.setEscalatedAt(payload.getEscalatedAt());
-        existing.setReason(payload.getReason());
+    private void copy(SystemEntity payload, SystemEntity existing) {
+        existing.setName(payload.getName());
+        existing.setOwnerUserId(payload.getOwnerUserId());
+        existing.setCategory(payload.getCategory());
     }
 
-    private void validate(EscalationLog payload) {
+    private void validate(SystemEntity payload) {
         var errors = validator.validate(payload);
         if (!errors.isEmpty())
             throw new ConstraintViolationException(errors);
-        if (payload.getRevocationTaskId() != null
-                && entityManager.find(RevocationTask.class, payload.getRevocationTaskId()) == null)
-            throw new ResourceNotFoundException("RevocationTask", payload.getRevocationTaskId());
-        if (payload.getEscalatedTo() != null && entityManager.find(Employee.class, payload.getEscalatedTo()) == null)
-            throw new ResourceNotFoundException("Employee", payload.getEscalatedTo());
+        if (payload.getOwnerUserId() != null && entityManager.find(Employee.class, payload.getOwnerUserId()) == null)
+            throw new ResourceNotFoundException("Employee", payload.getOwnerUserId());
     }
 }

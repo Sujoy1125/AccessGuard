@@ -19,10 +19,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.accessguard.accessguard.entity.DeviceAsset;
 import com.accessguard.accessguard.entity.Employee;
-import com.accessguard.accessguard.entity.HighRiskActivityFlag;
 import com.accessguard.accessguard.exception.ResourceNotFoundException;
-import com.accessguard.accessguard.repository.HighRiskActivityFlagRepository;
+import com.accessguard.accessguard.repository.DeviceAssetRepository;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.persistence.EntityManager;
@@ -33,18 +33,18 @@ import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.node.ObjectNode;
 
 @RestController
-@RequestMapping("/api/high-risk-activity-flags")
-@Tag(name = "HighRiskActivityFlag")
+@RequestMapping("/api/device-assets")
+@Tag(name = "DeviceAsset")
 @Transactional
-public class HighRiskActivityFlagController {
-    private static final Logger log = LoggerFactory.getLogger(HighRiskActivityFlagController.class);
-    private final HighRiskActivityFlagRepository repository;
+public class DeviceAssetController {
+    private static final Logger log = LoggerFactory.getLogger(DeviceAssetController.class);
+    private final DeviceAssetRepository repository;
     private final EntityManager entityManager;
     private final Validator validator;
     private final ObjectMapper mapper;
 
-    public HighRiskActivityFlagController(HighRiskActivityFlagRepository repository, EntityManager entityManager,
-            Validator validator, ObjectMapper mapper) {
+    public DeviceAssetController(DeviceAssetRepository repository, EntityManager entityManager, Validator validator,
+            ObjectMapper mapper) {
         this.repository = repository;
         this.entityManager = entityManager;
         this.validator = validator;
@@ -52,48 +52,47 @@ public class HighRiskActivityFlagController {
     }
 
     @GetMapping
-    public List<HighRiskActivityFlag> getAll() {
+    public List<DeviceAsset> getAll() {
         return repository.findAll();
     }
 
     @GetMapping("/{id}")
-    public HighRiskActivityFlag getById(@PathVariable UUID id) {
-        return repository.findById(id).orElseThrow(() -> new ResourceNotFoundException("HighRiskActivityFlag", id));
+    public DeviceAsset getById(@PathVariable UUID id) {
+        return repository.findById(id).orElseThrow(() -> new ResourceNotFoundException("DeviceAsset", id));
     }
 
     @PostMapping
-    public ResponseEntity<HighRiskActivityFlag> create(@Valid @RequestBody HighRiskActivityFlag payload) {
+    public ResponseEntity<DeviceAsset> create(@Valid @RequestBody DeviceAsset payload) {
         payload.setId(null);
         validate(payload);
-        HighRiskActivityFlag saved = repository.saveAndFlush(payload);
-        log.info("Created HighRiskActivityFlag {}", saved.getId());
+        DeviceAsset saved = repository.saveAndFlush(payload);
+        log.info("Created DeviceAsset {}", saved.getId());
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 
     @PutMapping("/{id}")
-    public HighRiskActivityFlag replace(@PathVariable UUID id, @Valid @RequestBody HighRiskActivityFlag payload) {
-        HighRiskActivityFlag existing = getById(id);
+    public DeviceAsset replace(@PathVariable UUID id, @Valid @RequestBody DeviceAsset payload) {
+        DeviceAsset existing = getById(id);
         validate(payload);
         copy(payload, existing);
-        log.info("Replaced HighRiskActivityFlag {}", id);
+        log.info("Replaced DeviceAsset {}", id);
         return repository.saveAndFlush(existing);
     }
 
     @PatchMapping("/{id}")
-    public HighRiskActivityFlag partialUpdate(@PathVariable UUID id, @RequestBody ObjectNode patch) {
-        HighRiskActivityFlag existing = getById(id);
+    public DeviceAsset partialUpdate(@PathVariable UUID id, @RequestBody ObjectNode patch) {
+        DeviceAsset existing = getById(id);
         ObjectNode merged = (ObjectNode) mapper.valueToTree(existing);
-        Set<String> allowed = Set.of("employeeId", "sourceSystem", "activityType", "detectedAt", "reviewedBy",
-                "reviewStatus", "detectedBy");
+        Set<String> allowed = Set.of("employeeId", "assetType", "returnStatus", "returnConfirmedAt");
         for (String field : patch.propertyNames()) {
             if (!allowed.contains(field))
                 throw new IllegalArgumentException("Unknown or immutable field: " + field);
             merged.set(field, patch.get(field));
         }
-        HighRiskActivityFlag payload = mapper.treeToValue(merged, HighRiskActivityFlag.class);
+        DeviceAsset payload = mapper.treeToValue(merged, DeviceAsset.class);
         validate(payload);
         copy(payload, existing);
-        log.info("Patched HighRiskActivityFlag {}", id);
+        log.info("Patched DeviceAsset {}", id);
         return repository.saveAndFlush(existing);
     }
 
@@ -101,29 +100,22 @@ public class HighRiskActivityFlagController {
     public ResponseEntity<Void> delete(@PathVariable UUID id) {
         repository.delete(getById(id));
         repository.flush();
-        log.info("Deleted HighRiskActivityFlag {}", id);
+        log.info("Deleted DeviceAsset {}", id);
         return ResponseEntity.noContent().build();
     }
 
-    private void copy(HighRiskActivityFlag payload, HighRiskActivityFlag existing) {
+    private void copy(DeviceAsset payload, DeviceAsset existing) {
         existing.setEmployeeId(payload.getEmployeeId());
-        existing.setSourceSystem(payload.getSourceSystem());
-        existing.setActivityType(payload.getActivityType());
-        existing.setDetectedAt(payload.getDetectedAt());
-        existing.setReviewedBy(payload.getReviewedBy());
-        existing.setReviewStatus(payload.getReviewStatus());
-        existing.setDetectedBy(payload.getDetectedBy());
+        existing.setAssetType(payload.getAssetType());
+        existing.setReturnStatus(payload.getReturnStatus());
+        existing.setReturnConfirmedAt(payload.getReturnConfirmedAt());
     }
 
-    private void validate(HighRiskActivityFlag payload) {
+    private void validate(DeviceAsset payload) {
         var errors = validator.validate(payload);
         if (!errors.isEmpty())
             throw new ConstraintViolationException(errors);
         if (payload.getEmployeeId() != null && entityManager.find(Employee.class, payload.getEmployeeId()) == null)
             throw new ResourceNotFoundException("Employee", payload.getEmployeeId());
-        if (payload.getReviewedBy() != null && entityManager.find(Employee.class, payload.getReviewedBy()) == null)
-            throw new ResourceNotFoundException("Employee", payload.getReviewedBy());
-        if (payload.getDetectedBy() != null && entityManager.find(Employee.class, payload.getDetectedBy()) == null)
-            throw new ResourceNotFoundException("Employee", payload.getDetectedBy());
     }
 }

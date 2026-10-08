@@ -31,3 +31,6 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Local integration backups, build logs and isolated database verification
+work/

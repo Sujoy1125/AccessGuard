@@ -21,8 +21,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.accessguard.accessguard.entity.Employee;
 import com.accessguard.accessguard.entity.HighRiskActivityFlag;
+import com.accessguard.accessguard.entity.OffboardingCase;
 import com.accessguard.accessguard.exception.ResourceNotFoundException;
-import com.accessguard.accessguard.repository.HighRiskActivityFlagRepository;
+import com.accessguard.accessguard.repository.OffboardingCaseRepository;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.persistence.EntityManager;
@@ -33,17 +34,17 @@ import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.node.ObjectNode;
 
 @RestController
-@RequestMapping("/api/high-risk-activity-flags")
-@Tag(name = "HighRiskActivityFlag")
+@RequestMapping("/api/offboarding-cases")
+@Tag(name = "OffboardingCase")
 @Transactional
-public class HighRiskActivityFlagController {
-    private static final Logger log = LoggerFactory.getLogger(HighRiskActivityFlagController.class);
-    private final HighRiskActivityFlagRepository repository;
+public class OffboardingCaseController {
+    private static final Logger log = LoggerFactory.getLogger(OffboardingCaseController.class);
+    private final OffboardingCaseRepository repository;
     private final EntityManager entityManager;
     private final Validator validator;
     private final ObjectMapper mapper;
 
-    public HighRiskActivityFlagController(HighRiskActivityFlagRepository repository, EntityManager entityManager,
+    public OffboardingCaseController(OffboardingCaseRepository repository, EntityManager entityManager,
             Validator validator, ObjectMapper mapper) {
         this.repository = repository;
         this.entityManager = entityManager;
@@ -52,48 +53,48 @@ public class HighRiskActivityFlagController {
     }
 
     @GetMapping
-    public List<HighRiskActivityFlag> getAll() {
+    public List<OffboardingCase> getAll() {
         return repository.findAll();
     }
 
     @GetMapping("/{id}")
-    public HighRiskActivityFlag getById(@PathVariable UUID id) {
-        return repository.findById(id).orElseThrow(() -> new ResourceNotFoundException("HighRiskActivityFlag", id));
+    public OffboardingCase getById(@PathVariable UUID id) {
+        return repository.findById(id).orElseThrow(() -> new ResourceNotFoundException("OffboardingCase", id));
     }
 
     @PostMapping
-    public ResponseEntity<HighRiskActivityFlag> create(@Valid @RequestBody HighRiskActivityFlag payload) {
+    public ResponseEntity<OffboardingCase> create(@Valid @RequestBody OffboardingCase payload) {
         payload.setId(null);
         validate(payload);
-        HighRiskActivityFlag saved = repository.saveAndFlush(payload);
-        log.info("Created HighRiskActivityFlag {}", saved.getId());
+        OffboardingCase saved = repository.saveAndFlush(payload);
+        log.info("Created OffboardingCase {}", saved.getId());
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 
     @PutMapping("/{id}")
-    public HighRiskActivityFlag replace(@PathVariable UUID id, @Valid @RequestBody HighRiskActivityFlag payload) {
-        HighRiskActivityFlag existing = getById(id);
+    public OffboardingCase replace(@PathVariable UUID id, @Valid @RequestBody OffboardingCase payload) {
+        OffboardingCase existing = getById(id);
         validate(payload);
         copy(payload, existing);
-        log.info("Replaced HighRiskActivityFlag {}", id);
+        log.info("Replaced OffboardingCase {}", id);
         return repository.saveAndFlush(existing);
     }
 
     @PatchMapping("/{id}")
-    public HighRiskActivityFlag partialUpdate(@PathVariable UUID id, @RequestBody ObjectNode patch) {
-        HighRiskActivityFlag existing = getById(id);
+    public OffboardingCase partialUpdate(@PathVariable UUID id, @RequestBody ObjectNode patch) {
+        OffboardingCase existing = getById(id);
         ObjectNode merged = (ObjectNode) mapper.valueToTree(existing);
-        Set<String> allowed = Set.of("employeeId", "sourceSystem", "activityType", "detectedAt", "reviewedBy",
-                "reviewStatus", "detectedBy");
+        Set<String> allowed = Set.of("employeeId", "initiatedBy", "initiatedAt", "targetCompletionDate", "status",
+                "triggerFlagId");
         for (String field : patch.propertyNames()) {
             if (!allowed.contains(field))
                 throw new IllegalArgumentException("Unknown or immutable field: " + field);
             merged.set(field, patch.get(field));
         }
-        HighRiskActivityFlag payload = mapper.treeToValue(merged, HighRiskActivityFlag.class);
+        OffboardingCase payload = mapper.treeToValue(merged, OffboardingCase.class);
         validate(payload);
         copy(payload, existing);
-        log.info("Patched HighRiskActivityFlag {}", id);
+        log.info("Patched OffboardingCase {}", id);
         return repository.saveAndFlush(existing);
     }
 
@@ -101,29 +102,36 @@ public class HighRiskActivityFlagController {
     public ResponseEntity<Void> delete(@PathVariable UUID id) {
         repository.delete(getById(id));
         repository.flush();
-        log.info("Deleted HighRiskActivityFlag {}", id);
+        log.info("Deleted OffboardingCase {}", id);
         return ResponseEntity.noContent().build();
     }
 
-    private void copy(HighRiskActivityFlag payload, HighRiskActivityFlag existing) {
+    private void copy(OffboardingCase payload, OffboardingCase existing) {
         existing.setEmployeeId(payload.getEmployeeId());
-        existing.setSourceSystem(payload.getSourceSystem());
-        existing.setActivityType(payload.getActivityType());
-        existing.setDetectedAt(payload.getDetectedAt());
-        existing.setReviewedBy(payload.getReviewedBy());
-        existing.setReviewStatus(payload.getReviewStatus());
-        existing.setDetectedBy(payload.getDetectedBy());
+        existing.setInitiatedBy(payload.getInitiatedBy());
+        existing.setInitiatedAt(payload.getInitiatedAt());
+        existing.setTargetCompletionDate(payload.getTargetCompletionDate());
+        existing.setStatus(payload.getStatus());
+        existing.setTriggerFlagId(payload.getTriggerFlagId());
     }
 
-    private void validate(HighRiskActivityFlag payload) {
+    private void validate(OffboardingCase payload) {
         var errors = validator.validate(payload);
         if (!errors.isEmpty())
             throw new ConstraintViolationException(errors);
+        if (payload.getTriggerFlagId() != null) {
+            HighRiskActivityFlag flag = entityManager.find(HighRiskActivityFlag.class, payload.getTriggerFlagId());
+            if (flag != null && !flag.getEmployeeId().equals(payload.getEmployeeId()))
+                throw new IllegalArgumentException("Trigger flag must belong to the offboarding employee");
+        }
         if (payload.getEmployeeId() != null && entityManager.find(Employee.class, payload.getEmployeeId()) == null)
             throw new ResourceNotFoundException("Employee", payload.getEmployeeId());
-        if (payload.getReviewedBy() != null && entityManager.find(Employee.class, payload.getReviewedBy()) == null)
-            throw new ResourceNotFoundException("Employee", payload.getReviewedBy());
-        if (payload.getDetectedBy() != null && entityManager.find(Employee.class, payload.getDetectedBy()) == null)
-            throw new ResourceNotFoundException("Employee", payload.getDetectedBy());
+        if (payload.getInitiatedBy() != null && entityManager.find(Employee.class, payload.getInitiatedBy()) == null)
+            throw new ResourceNotFoundException("Employee", payload.getInitiatedBy());
+        if (payload.getTriggerFlagId() != null
+                && entityManager.find(HighRiskActivityFlag.class, payload.getTriggerFlagId()) == null)
+            throw new ResourceNotFoundException("HighRiskActivityFlag", payload.getTriggerFlagId());
+        if (payload.getTargetCompletionDate().isBefore(payload.getInitiatedAt().toLocalDate()))
+            throw new IllegalArgumentException("Target completion date must not precede initiation");
     }
 }

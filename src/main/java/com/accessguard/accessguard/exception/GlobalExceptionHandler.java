@@ -43,7 +43,7 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(body);
     }
 
-    // Malformed JSON body, wrong type for a field, etc. — currently unhandled,
+    // Malformed JSON body, wrong type for a field, etc. â€” currently unhandled,
     // would otherwise leak a raw stack trace to the client.
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<Map<String, Object>> handleUnreadable(HttpMessageNotReadableException ex) {
@@ -56,7 +56,21 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(body);
     }
 
-    // Catch-all safety net — anything not explicitly handled above still
+    @ExceptionHandler({ IllegalArgumentException.class, jakarta.validation.ConstraintViolationException.class,
+            org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class })
+    public ResponseEntity<Map<String, Object>> handleBadRequest(Exception ex) {
+        return ResponseEntity.badRequest()
+                .body(Map.of("status", 400, "error", "Bad Request", "message", ex.getMessage()));
+    }
+
+    @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
+    public ResponseEntity<Map<String, Object>> handleConflict(Exception ex) {
+        log.warn("Database constraint rejected request", ex);
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("status", 409, "error", "Conflict",
+                "message", "A unique or foreign-key constraint prevents this operation"));
+    }
+
+    // Catch-all safety net â€” anything not explicitly handled above still
     // returns a clean 500 JSON body instead of an exposed stack trace.
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleUnexpected(Exception ex) {

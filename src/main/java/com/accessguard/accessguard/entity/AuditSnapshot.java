@@ -1,9 +1,15 @@
 package com.accessguard.accessguard.entity;
 
-import jakarta.persistence.*;
-import jakarta.validation.constraints.NotNull;
 import java.time.LocalDate;
 import java.util.UUID;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotNull;
 
 @Entity
 @Table(name = "audit_snapshot")
@@ -22,15 +28,22 @@ public class AuditSnapshot {
     private LocalDate periodEnd;
 
     @Column(name = "total_offboardings", nullable = false)
+    @jakarta.validation.constraints.NotNull
+    @jakarta.validation.constraints.Min(0)
     private Integer totalOffboardings = 0;
 
     @Column(name = "pct_fully_revoked_on_time")
+    @jakarta.validation.constraints.DecimalMin("0")
+    @jakarta.validation.constraints.DecimalMax("100")
     private Float pctFullyRevokedOnTime;
 
     @Column(name = "avg_revocation_time_hrs")
+    @jakarta.validation.constraints.DecimalMin("0")
     private Float avgRevocationTimeHrs;
 
     @Column(name = "overdue_cases_count", nullable = false)
+    @jakarta.validation.constraints.NotNull
+    @jakarta.validation.constraints.Min(0)
     private Integer overdueCasesCount = 0;
 
     public AuditSnapshot() {
@@ -90,5 +103,18 @@ public class AuditSnapshot {
 
     public void setOverdueCasesCount(Integer overdueCasesCount) {
         this.overdueCasesCount = overdueCasesCount;
+    }
+
+    @jakarta.validation.constraints.NotNull
+    @jakarta.validation.constraints.Min(0)
+    @Column(name = "retained_asset_count", nullable = false)
+    private Integer retainedAssetCount = 0;
+
+    public Integer getRetainedAssetCount() {
+        return retainedAssetCount;
+    }
+
+    public void setRetainedAssetCount(Integer value) {
+        retainedAssetCount = value;
     }
 }
